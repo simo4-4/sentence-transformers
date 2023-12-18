@@ -267,7 +267,7 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
                 avg_precision = sum_precisions / min(k_val, len(query_relevant_docs))
                 AveP_at_k[k_val].append(avg_precision)
 
-                if num_correct == 0 and k_val is max(self.map_at_k):
+                if num_correct == 0 and k_val == max(self.map_at_k):
                     self.complete_bad_hits[query_id] = top_hits[0:k_val]
 
         # Compute averages
