@@ -65,6 +65,9 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
         self.score_function_names = sorted(list(self.score_functions.keys()))
         self.main_score_function = main_score_function
 
+        #Dict with type qid => Set(cid), Queries where no relevant document has been found
+        self.complete_bad_hits = {}
+
         if name:
             name = "_" + name
 
@@ -135,6 +138,11 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
             return max([scores[name]['map@k'][max(self.map_at_k)] for name in self.score_function_names])
         else:
             return scores[self.main_score_function]['map@k'][max(self.map_at_k)]
+        
+    def get_queries_with_complete_bad_hits(self) -> Dict[str, set]:
+        return self.complete_bad_hits
+
+
 
     def compute_metrices(self, model, corpus_model = None, corpus_embeddings: Tensor = None) -> Dict[str, float]:
         if corpus_model is None:
@@ -194,7 +202,7 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
             self.output_scores(scores[name])
 
         return scores
-
+    
 
     def compute_metrics(self, queries_result_list: List[object]):
         # Init score computation values
@@ -204,6 +212,7 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
         MRR = {k: 0 for k in self.mrr_at_k}
         ndcg = {k: [] for k in self.ndcg_at_k}
         AveP_at_k = {k: [] for k in self.map_at_k}
+
 
         # Compute scores on results
         for query_itr in range(len(queries_result_list)):
@@ -257,6 +266,9 @@ class InformationRetrievalEvaluator(SentenceEvaluator):
 
                 avg_precision = sum_precisions / min(k_val, len(query_relevant_docs))
                 AveP_at_k[k_val].append(avg_precision)
+
+                if num_correct == 0 and k_val is max(self.map_at_k):
+                    self.complete_bad_hits[query_id] = top_hits[0:k_val]
 
         # Compute averages
         for k in num_hits_at_k:
